@@ -1,0 +1,18 @@
+[package]
+name = "degen-terminal"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.88"
+
+[dependencies]
+ratatui = { version = "0.30", default-features = false, features = ["crossterm"] }
+ratatui-hypertile = "0.3"
+ratatui-hypertile-extras = { version = "0.3", features = ["crossterm"] }
+crossterm = "0.29"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+dirs = "6"
+arboard = "3"
+unicode-width = "0.2"
+portable-pty = "0.9.0"
+vt100 = "0.16.2"
