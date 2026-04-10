@@ -3,6 +3,13 @@ name = "degen-terminal"
 version = "0.1.0"
 edition = "2024"
 rust-version = "1.88"
+description = "A terminal multiplexer with tiling window management, tabbed workspaces, and 20 color themes"
+license = "MIT"
+repository = "https://github.com/ethereumdegen/degen-terminal"
+homepage = "https://github.com/ethereumdegen/degen-terminal"
+keywords = ["terminal", "multiplexer", "tui", "ratatui", "tiling"]
+categories = ["command-line-utilities"]
+readme = "README.md"
 
 [dependencies]
 ratatui = { version = "0.30", default-features = false, features = ["crossterm"] }
