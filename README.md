@@ -19,6 +19,12 @@ A terminal multiplexer built in Rust. Tiling window management, tabbed workspace
 ## Installation
 
 ```bash
+cargo install degen-terminal
+```
+
+### From source
+
+```bash
 git clone https://github.com/ethereumdegen/degen-terminal.git
 cd degen-terminal
 cargo build --release
