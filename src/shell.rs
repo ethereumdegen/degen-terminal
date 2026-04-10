@@ -1,7 +1,7 @@
 use std::io::{Read, Write};
 use std::sync::{Arc, Mutex};
 
-use portable_pty::{CommandBuilder, MasterPty, PtySize, native_pty_system};
+use portable_pty::{Child, CommandBuilder, MasterPty, PtySize, native_pty_system};
 
 /// A real terminal session backed by a PTY + vt100 parser.
 #[allow(dead_code)]
@@ -24,6 +24,8 @@ pub struct ShellSession {
     pub pty_rows: u16,
     /// Master PTY handle (kept alive for resize)
     master_pty: Option<Box<dyn MasterPty + Send>>,
+    /// Child process handle for explicit cleanup
+    child: Option<Box<dyn Child + Send>>,
 }
 
 impl ShellSession {
@@ -42,6 +44,7 @@ impl ShellSession {
             pty_cols: cols,
             pty_rows: rows,
             master_pty: None,
+            child: None,
         };
 
         session.spawn_shell();
@@ -70,10 +73,14 @@ impl ShellSession {
         // Start login shell
         cmd.arg("-l");
 
-        if let Err(e) = pair.slave.spawn_command(cmd) {
-            self.parser.process(format!("Failed to spawn shell: {}\r\n", e).as_bytes());
-            return;
-        }
+        let child = match pair.slave.spawn_command(cmd) {
+            Ok(child) => child,
+            Err(e) => {
+                self.parser.process(format!("Failed to spawn shell: {}\r\n", e).as_bytes());
+                return;
+            }
+        };
+        self.child = Some(child);
 
         // Get writer to send input
         let writer = match pair.master.take_writer() {
@@ -193,5 +200,14 @@ impl Drop for ShellSession {
         // Drop the writer first to signal EOF
         self.master_writer = None;
         self.master_pty = None;
+        // Kill the child process so it doesn't linger
+        if let Some(mut child) = self.child.take() {
+            let _ = child.kill();
+            let _ = child.wait();
+        }
+        // Wait for the reader thread to finish
+        if let Some(handle) = self.master_reader_thread.take() {
+            let _ = handle.join();
+        }
     }
 }

@@ -920,6 +920,15 @@ fn build_runtime() -> HypertileRuntime {
     rt
 }
 
+fn restore_terminal() {
+    let _ = crossterm::execute!(
+        std::io::stdout(),
+        crossterm::event::DisableMouseCapture,
+        crossterm::event::DisableBracketedPaste
+    );
+    ratatui::restore();
+}
+
 fn main() -> std::io::Result<()> {
     theme::load_saved();
 
@@ -930,6 +939,13 @@ fn main() -> std::io::Result<()> {
         crossterm::event::EnableBracketedPaste
     )?;
 
+    // Install panic hook so the terminal is always restored, even on panic
+    let default_hook = std::panic::take_hook();
+    std::panic::set_hook(Box::new(move |info| {
+        restore_terminal();
+        default_hook(info);
+    }));
+
     let mut workspace = WorkspaceRuntime::new(build_runtime);
 
     // Start with a single shell pane
@@ -937,12 +953,13 @@ fn main() -> std::io::Result<()> {
     let _ = rt.replace_focused_plugin("shell");
 
     let result = run(&mut terminal, &mut workspace);
-    crossterm::execute!(
-        std::io::stdout(),
-        crossterm::event::DisableMouseCapture,
-        crossterm::event::DisableBracketedPaste
-    )?;
-    ratatui::restore();
+
+    // Clean up all shell sessions before restoring terminal
+    if let Ok(mut sess_map) = sessions().lock() {
+        sess_map.clear();
+    }
+
+    restore_terminal();
     result
 }
 
